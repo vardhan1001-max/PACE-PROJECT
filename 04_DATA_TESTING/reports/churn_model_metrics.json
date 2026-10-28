@@ -1,0 +1,55 @@
+{
+  "all_models": [
+    {
+      "model": "Logistic Regression",
+      "accuracy": 0.7586,
+      "precision": 0.392,
+      "recall": 0.7775,
+      "f1_score": 0.5212,
+      "roc_auc": 0.8414
+    },
+    {
+      "model": "Decision Tree",
+      "accuracy": 0.8176,
+      "precision": 0.4747,
+      "recall": 0.7408,
+      "f1_score": 0.5787,
+      "roc_auc": 0.8761
+    },
+    {
+      "model": "Random Forest",
+      "accuracy": 0.9395,
+      "precision": 0.822,
+      "recall": 0.8197,
+      "f1_score": 0.8209,
+      "roc_auc": 0.9756
+    },
+    {
+      "model": "SVM",
+      "accuracy": 0.5038,
+      "precision": 0.2072,
+      "recall": 0.6845,
+      "f1_score": 0.3181,
+      "roc_auc": 0.5783
+    },
+    {
+      "model": "XGBoost",
+      "accuracy": 0.9633,
+      "precision": 0.9238,
+      "recall": 0.8535,
+      "f1_score": 0.8873,
+      "roc_auc": 0.9847
+    },
+    {
+      "model": "LightGBM",
+      "accuracy": 0.9605,
+      "precision": 0.9224,
+      "recall": 0.8366,
+      "f1_score": 0.8774,
+      "roc_auc": 0.9833
+    }
+  ],
+  "best_model": "XGBoost",
+  "imbalance_strategy": "SMOTE oversampling (train split only)",
+  "selection_criterion": "highest F1 on held-out test split"
+}

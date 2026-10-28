@@ -1,0 +1,26 @@
+{
+  "comparison": [
+    {
+      "model": "K-Means",
+      "silhouette": 0.3211,
+      "davies_bouldin": 1.1697,
+      "calinski_harabasz": 5454.54,
+      "n_clusters": 5
+    },
+    {
+      "model": "DBSCAN",
+      "silhouette": null,
+      "davies_bouldin": null,
+      "calinski_harabasz": null,
+      "n_clusters": 1
+    },
+    {
+      "model": "Hierarchical",
+      "silhouette": 0.2361,
+      "davies_bouldin": 1.3501,
+      "calinski_harabasz": 4792.01,
+      "n_clusters": 5
+    }
+  ],
+  "best_model": "K-Means"
+}

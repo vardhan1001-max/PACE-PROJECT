@@ -1,0 +1,10 @@
+{
+  "churn_rate": "Overall churn rate is 16.9% \u2014 roughly 1 in 6 customers leaves.",
+  "top_city": "Chennai contributes the largest customer base \u2014 prioritise it for regional campaigns.",
+  "tenure_dist": "Most customers are early-tenure (under 12 months) \u2014 retention efforts in the first year matter most.",
+  "top_category": "Laptop & Accessory is the most popular category \u2014 stock and promote it heavily across Tier-1 cities.",
+  "satisfaction_link": "Churn rate climbs sharply for customers with satisfaction score <=2 \u2014 early complaint resolution is the single highest-leverage retention lever.",
+  "top_payment": "Debit Card is the dominant payment mode \u2014 ensure it's frictionless and prominently placed at checkout.",
+  "top_spend_state": "Customers in Bihar have the highest average annual spend (\u20b940,870) \u2014 a strong region for premium/loyalty offers.",
+  "complaint_link": "Customers who raised a complaint churn at a substantially higher rate \u2014 a fast complaint-resolution SLA directly protects revenue."
+}

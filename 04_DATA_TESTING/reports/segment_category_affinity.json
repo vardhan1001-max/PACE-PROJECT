@@ -1,0 +1,37 @@
+{
+  "methodology": "Content-based hybrid recommender: k-Nearest-Neighbours on real behavioural features (segment, RFM, engagement, city tier) \u2014 PreferedOrderCat excluded from the feature space to avoid circular recommendations \u2014 combined with a Segment x Category affinity table for explainability. NOT collaborative filtering: the dataset has no basket/transaction log to support that.",
+  "segment_category_affinity_pct": {
+    "Big Spenders": {
+      "Fashion": 22.8,
+      "Grocery": 14.5,
+      "Laptop & Accessory": 34.0,
+      "Mobile": 3.7,
+      "Mobile Phone": 10.6,
+      "Others": 14.4
+    },
+    "Loyal High-Value": {
+      "Fashion": 23.6,
+      "Grocery": 10.9,
+      "Laptop & Accessory": 41.7,
+      "Mobile": 8.1,
+      "Mobile Phone": 8.1,
+      "Others": 7.6
+    },
+    "New / Recently Acquired": {
+      "Fashion": 10.0,
+      "Grocery": 4.3,
+      "Laptop & Accessory": 35.6,
+      "Mobile": 19.1,
+      "Mobile Phone": 28.3,
+      "Others": 2.6
+    },
+    "Occasional Shoppers": {
+      "Fashion": 21.9,
+      "Grocery": 11.6,
+      "Laptop & Accessory": 44.7,
+      "Mobile": 5.2,
+      "Mobile Phone": 11.7,
+      "Others": 5.0
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "insights": [
+    "Customers from Gujarat buying Grocery show high retention (avg churn probability 0.0%) \u2014 safe to upsell, low discount needed.",
+    "Customers from Uttar Pradesh buying Grocery show high retention (avg churn probability 0.1%) \u2014 safe to upsell, low discount needed.",
+    "Customers from Delhi buying Grocery show high retention (avg churn probability 0.2%) \u2014 safe to upsell, low discount needed.",
+    "Customers from Rajasthan buying Grocery show high retention (avg churn probability 0.2%) \u2014 safe to upsell, low discount needed.",
+    "Customers from Uttar Pradesh buying Others show high retention (avg churn probability 0.4%) \u2014 safe to upsell, low discount needed.",
+    "Customers from Uttar Pradesh buying Fashion show elevated churn risk (avg churn probability 60.8%) \u2014 prioritise loyalty offers here.",
+    "Customers from Bihar buying Mobile show elevated churn risk (avg churn probability 48.8%) \u2014 prioritise loyalty offers here.",
+    "Customers from Rajasthan buying Fashion show elevated churn risk (avg churn probability 48.7%) \u2014 prioritise loyalty offers here.",
+    "Customers from Bihar buying Mobile Phone show elevated churn risk (avg churn probability 46.5%) \u2014 prioritise loyalty offers here.",
+    "Customers from Gujarat buying Mobile show elevated churn risk (avg churn probability 42.0%) \u2014 prioritise loyalty offers here."
+  ]
+}

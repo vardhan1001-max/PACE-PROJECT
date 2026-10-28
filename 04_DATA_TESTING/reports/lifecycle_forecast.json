@@ -1,0 +1,187 @@
+{
+  "methodology": "Customer lifecycle revenue curve built from real per-customer Tenure and Monetary values (no synthetic/fabricated data). Forecasts project this real curve beyond the last observed tenure month; they are NOT calendar-month sales predictions.",
+  "historical": {
+    "tenure_months": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33
+    ],
+    "avg_monetary": [
+      24428.35,
+      33290.83,
+      28701.27,
+      33755.56,
+      38043.02,
+      38382.14,
+      36647.19,
+      36393.82,
+      40657.07,
+      25702.88,
+      38485.09,
+      39184.37,
+      45388.67,
+      46483.19,
+      48395.82,
+      47465.48,
+      48198.03,
+      48317.58,
+      49394.69,
+      48869.96,
+      52626.05,
+      56658.35,
+      42284.93,
+      51084.67,
+      63571.89,
+      53444.63,
+      60493.85,
+      54611.74,
+      53117.65,
+      59369.74,
+      44238.26,
+      51529.07,
+      32833.56,
+      55326.81
+    ],
+    "customer_count": [
+      996,
+      1081,
+      432,
+      412,
+      412,
+      358,
+      342,
+      426,
+      486,
+      939,
+      405,
+      371,
+      343,
+      355,
+      335,
+      303,
+      268,
+      233,
+      227,
+      245,
+      206,
+      134,
+      145,
+      164,
+      135,
+      93,
+      101,
+      116,
+      118,
+      107,
+      104,
+      84,
+      12,
+      12
+    ]
+  },
+  "backtest_comparison": [
+    {
+      "model": "Naive (carry-forward)",
+      "mape": 17.98,
+      "rmse": 10138.9
+    },
+    {
+      "model": "Holt Linear Trend (manual)",
+      "mape": 15.66,
+      "rmse": 8168.92,
+      "params": {
+        "alpha": 0.9,
+        "beta": 0.6,
+        "rmse": 8168.921234341151
+      }
+    }
+  ],
+  "best_backtest_model": "Holt Linear Trend (manual)",
+  "forecast": {
+    "tenure_months": [
+      34,
+      35,
+      36,
+      37,
+      38,
+      39
+    ],
+    "predicted_avg_monetary": [
+      59169.54,
+      66030.88,
+      72892.21,
+      79753.54,
+      86614.87,
+      93476.2
+    ],
+    "lower_ci": [
+      43159.37,
+      50020.7,
+      56882.03,
+      63743.37,
+      70604.7,
+      77466.03
+    ],
+    "upper_ci": [
+      75179.72,
+      82041.05,
+      88902.38,
+      95763.71,
+      102625.05,
+      109486.38
+    ]
+  },
+  "segment_lifecycle_summary": {
+    "Big Spenders": {
+      "current_avg_monetary": 108672.02,
+      "next_month_projection": 103987.82,
+      "trend": "down"
+    },
+    "Loyal High-Value": {
+      "current_avg_monetary": 114410.85,
+      "next_month_projection": 119740.37,
+      "trend": "up"
+    },
+    "New / Recently Acquired": {
+      "current_avg_monetary": 41354.05,
+      "next_month_projection": 44809.4,
+      "trend": "up"
+    },
+    "Occasional Shoppers": {
+      "current_avg_monetary": 34433.48,
+      "next_month_projection": 34418.57,
+      "trend": "down"
+    }
+  }
+}
