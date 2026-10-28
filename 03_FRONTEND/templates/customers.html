@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block page_title %}Customer List{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="panel-title mb-0"><i class="fa-solid fa-users" style="color:var(--accent); font-size:13px;"></i> All Customers</div>
+    <div class="d-flex gap-2 align-items-center">
+      <span class="badge bg-secondary" style="font-size:12px; font-weight:500;">
+        <i class="fa-solid fa-database"></i> {{ "{:,}".format(total_customers) if total_customers else '1,000,000' }} Customers
+      </span>
+      <a href="{{ url_for('export_excel') }}" class="btn btn-sm btn-success"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
+      <a href="{{ url_for('export_pdf') }}" class="btn btn-sm btn-danger"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
+    </div>
+  </div>
+  {% if total_customers and total_customers > displayed_count and not prefill_q %}
+  <div class="alert alert-secondary py-2 px-3 mb-3 d-flex justify-content-between align-items-center" style="font-size:12px;">
+    <span><i class="fa-solid fa-bolt"></i> Displaying top <strong>{{ "{:,}".format(displayed_count) }}</strong> customer records from the <strong>{{ "{:,}".format(total_customers) }}</strong> database for optimal interface responsiveness. Use search or Customer 360 to lookup any customer.</span>
+  </div>
+  {% endif %}
+  {% if prefill_q %}
+  <div class="alert alert-info d-flex justify-content-between align-items-center py-2 px-3 mb-3" style="font-size:12.5px;">
+    <span><i class="fa-solid fa-filter"></i> Filtered by <strong>"{{ prefill_q }}"</strong> (found {{ "{:,}".format(displayed_count) }} matches across {{ "{:,}".format(total_customers) }} records)</span>
+    <a href="{{ url_for('customers') }}" class="btn btn-sm btn-outline-secondary py-0"><i class="fa-solid fa-xmark"></i> Clear</a>
+  </div>
+  {% endif %}
+
+  {% if not has_data %}
+  <div class="empty-state"><i class="fa-solid fa-users"></i><h3>No customers yet</h3><p>Run the pipeline to populate customer data.</p></div>
+  {% else %}
+  <div class="table-responsive">
+    <table id="custTable" class="table table-hover align-middle" style="width:100%">
+      <thead>
+        <tr>
+          {% for c in columns %}<th>{{ c }}</th>{% endfor %}
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in customers %}
+        <tr>
+          {% for c in columns %}
+            <td>
+              {% if c == 'ChurnRiskBand' %}
+                <span class="badge-risk-{{ row[c]|lower }}">{{ row[c] }}</span>
+              {% elif c == 'SegmentName' %}
+                <span class="badge-segment">{{ row[c] }}</span>
+              {% elif c == 'EstimatedAnnualSpendINR' %}
+                ₹{{ "{:,.0f}".format(row[c]) }}
+              {% elif c == 'Churn' %}
+                {{ 'Churned' if row[c] == 1 else 'Retained' }}
+              {% else %}
+                {{ row[c] }}
+              {% endif %}
+            </td>
+          {% endfor %}
+          <td><a href="{{ url_for('customer360', customer_id=row.CustomerID) }}" class="row-action-link"><i class="fa-solid fa-id-card-clip"></i> 360</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if has_data %}
+<script>
+$(document).ready(function () {
+  const table = $('#custTable').DataTable({
+    pageLength: 10,
+    lengthMenu: [10, 25, 50, 100],
+    order: [],
+  });
+  const prefill = {{ (prefill_q or '')|tojson }};
+  if (prefill) { table.search(prefill).draw(); }
+});
+</script>
+{% endif %}
+{% endblock %}

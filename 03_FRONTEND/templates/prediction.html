@@ -1,0 +1,606 @@
+{% extends "base.html" %}
+{% block page_title %}Retention Prediction & AI Explainability{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <!-- Left Column: Form & Customer Lookup -->
+  <div class="col-lg-7">
+    <div class="panel">
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="panel-title mb-0">
+          <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent); font-size:14px;"></i> Customer Retention Predictor
+        </div>
+        <span class="badge" style="background:rgba(99,102,241,0.12); color:var(--accent); border:1px solid rgba(99,102,241,0.25); font-weight:500; font-size:11.5px;">
+          <i class="fa-solid fa-brain me-1"></i> Random Forest + SHAP
+        </span>
+      </div>
+
+      <!-- 1. Quick Customer Lookup -->
+      <div class="lookup-card p-3 mb-4 rounded" style="background:var(--surface-2); border:1px solid var(--border);">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div style="font-size:12px; font-weight:700; color:var(--accent); letter-spacing:.03em; text-transform:uppercase;">
+            <i class="fa-solid fa-user-check me-1"></i> Quick Customer Lookup & Auto-Fill
+          </div>
+          <span class="text-muted" style="font-size:11px;">1,000,000 customer database</span>
+        </div>
+        <div class="row g-2 align-items-center">
+          <div class="col-md-7">
+            <select id="sampleCustomerSelect" class="form-select form-select-sm" style="background:var(--surface); border-color:var(--border); color:var(--text); font-size:12.5px;">
+              <option value="">-- Select a Sample Customer Profile --</option>
+              {% for sc in sample_customers %}
+              <option value="{{ sc.id }}">{{ sc.id }} - {{ sc.name }} ({{ sc.desc }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-5 d-flex gap-2">
+            <input type="number" id="manualCustomerId" class="form-control form-control-sm" placeholder="Enter ID (50001 - 1050000)" min="50001" max="1050000" style="background:var(--surface); border-color:var(--border); color:var(--text); font-size:12px;">
+            <button type="button" id="btnLoadCustomer" class="btn btn-outline-primary btn-sm text-nowrap d-flex align-items-center gap-1">
+              <i class="fa-solid fa-cloud-arrow-down"></i> Auto-Fill
+            </button>
+          </div>
+        </div>
+        <div id="customerLookupStatus" class="mt-2 small d-none" style="font-size:11.5px;"></div>
+      </div>
+
+      <!-- 2. Main Prediction Form -->
+      <form id="predictionForm" method="POST" action="{{ url_for('prediction') }}">
+        
+        <!-- Group 1: Profile & Demographics -->
+        <div class="form-group-section mb-3 p-3 rounded" style="background:var(--surface-2); border:1px solid var(--border);">
+          <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="font-weight:600; font-size:13px; color:var(--text);">
+            <i class="fa-solid fa-id-card text-primary"></i> 1. Customer Profile & Demographics
+          </div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Tenure (Months) <span class="text-danger">*</span></label>
+              <input type="number" step="0.5" min="0" max="120" name="Tenure" id="field_Tenure" class="form-control" placeholder="e.g. 12" required value="{{ prefill.Tenure if prefill else 12 }}">
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Duration with company</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:12px; font-weight:600;">City Tier <span class="text-danger">*</span></label>
+              <select name="CityTier" id="field_CityTier" class="form-select" required>
+                <option value="1" {% if prefill and prefill.CityTier|int == 1 %}selected{% endif %}>Tier 1 (Metro / Major)</option>
+                <option value="2" {% if prefill and prefill.CityTier|int == 2 %}selected{% endif %}>Tier 2 (Emerging Hub)</option>
+                <option value="3" {% if prefill and prefill.CityTier|int == 3 %}selected{% endif %}>Tier 3 (Regional)</option>
+              </select>
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Geographic location</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Warehouse Distance (km) <span class="text-danger">*</span></label>
+              <input type="number" step="0.5" min="1" max="150" name="WarehouseToHome" id="field_WarehouseToHome" class="form-control" placeholder="e.g. 14" required value="{{ prefill.WarehouseToHome if prefill else 14 }}">
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Fulfillment distance</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Gender</label>
+              <select name="Gender" id="field_Gender" class="form-select">
+                <option value="1" {% if not prefill or prefill.Gender|int == 1 %}selected{% endif %}>Male</option>
+                <option value="0" {% if prefill and prefill.Gender|int == 0 %}selected{% endif %}>Female</option>
+              </select>
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Customer demographic</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px; font-weight:600;">YoY Spend Growth (%)</label>
+              <input type="number" step="0.5" min="-50" max="100" name="OrderAmountHikeFromlastYear" id="field_OrderAmountHikeFromlastYear" class="form-control" placeholder="e.g. 15.0" value="{{ prefill.OrderAmountHikeFromlastYear if prefill else 15.0 }}">
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Annual order growth</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Group 2: App & Engagement Metrics -->
+        <div class="form-group-section mb-3 p-3 rounded" style="background:var(--surface-2); border:1px solid var(--border);">
+          <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="font-weight:600; font-size:13px; color:var(--text);">
+            <i class="fa-solid fa-mobile-screen text-success"></i> 2. Engagement & App Metrics
+          </div>
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Daily App Hours <span class="text-danger">*</span></label>
+              <input type="number" step="0.1" min="0" max="24" name="HourSpendOnApp" id="field_HourSpendOnApp" class="form-control" placeholder="e.g. 3.0" required value="{{ prefill.HourSpendOnApp if prefill else 3.0 }}">
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Avg hours on app</div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Registered Devices <span class="text-danger">*</span></label>
+              <input type="number" min="1" max="10" name="NumberOfDeviceRegistered" id="field_NumberOfDeviceRegistered" class="form-control" placeholder="e.g. 3" required value="{{ prefill.NumberOfDeviceRegistered if prefill else 3 }}">
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Active logged-in devices</div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Satisfaction (1-5) <span class="text-danger">*</span></label>
+              <select name="SatisfactionScore" id="field_SatisfactionScore" class="form-select" required>
+                <option value="5" {% if prefill and prefill.SatisfactionScore|int == 5 %}selected{% endif %}>5 - Excellent</option>
+                <option value="4" {% if prefill and prefill.SatisfactionScore|int == 4 %}selected{% endif %}>4 - Good</option>
+                <option value="3" {% if not prefill or prefill.SatisfactionScore|int == 3 %}selected{% endif %}>3 - Neutral</option>
+                <option value="2" {% if prefill and prefill.SatisfactionScore|int == 2 %}selected{% endif %}>2 - Unsatisfied</option>
+                <option value="1" {% if prefill and prefill.SatisfactionScore|int == 1 %}selected{% endif %}>1 - Highly Dissatisfied</option>
+              </select>
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Reported CSAT rating</div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Complaint Raised <span class="text-danger">*</span></label>
+              <select name="Complain" id="field_Complain" class="form-select" required>
+                <option value="0" {% if not prefill or prefill.Complain|int == 0 %}selected{% endif %}>No Complaints (0)</option>
+                <option value="1" {% if prefill and prefill.Complain|int == 1 %}selected{% endif %}>Recent Complaint (1)</option>
+              </select>
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Logged customer issues</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Group 3: Purchasing & Behavioral Metrics -->
+        <div class="form-group-section mb-3 p-3 rounded" style="background:var(--surface-2); border:1px solid var(--border);">
+          <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="font-weight:600; font-size:13px; color:var(--text);">
+            <i class="fa-solid fa-basket-shopping text-warning"></i> 3. Behavioral & Transactional History
+          </div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Order Count <span class="text-danger">*</span></label>
+              <input type="number" min="1" max="100" name="OrderCount" id="field_OrderCount" class="form-control" placeholder="e.g. 2" required value="{{ prefill.OrderCount if prefill else 2 }}">
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Lifetime completed orders</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Days Since Last Order <span class="text-danger">*</span></label>
+              <input type="number" min="0" max="365" name="DaySinceLastOrder" id="field_DaySinceLastOrder" class="form-control" placeholder="e.g. 4" required value="{{ prefill.DaySinceLastOrder if prefill else 4 }}">
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Recency indicator</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Coupons Used</label>
+              <input type="number" min="0" max="50" name="CouponUsed" id="field_CouponUsed" class="form-control" placeholder="e.g. 1" value="{{ prefill.CouponUsed if prefill else 1 }}">
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Coupons redeemed</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Avg Cashback Earned (₹)</label>
+              <input type="number" step="1" min="0" max="1000" name="CashbackAmount" id="field_CashbackAmount" class="form-control" placeholder="e.g. 170" value="{{ prefill.CashbackAmount if prefill else 170.0 }}">
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Reward earnings per order</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:12px; font-weight:600;">Est. Annual Spend (₹)</label>
+              <input type="number" step="100" min="0" max="500000" name="EstimatedAnnualSpendINR" id="field_EstimatedAnnualSpendINR" class="form-control" placeholder="e.g. 25000" value="{{ prefill.EstimatedAnnualSpendINR if prefill else 25000 }}">
+              <div class="form-text" style="font-size:11px; color:var(--text-tertiary);">Annualized customer value</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit & Reset Controls -->
+        <div class="d-flex gap-2 align-items-center mt-3">
+          <button type="submit" id="btnPredict" class="btn btn-primary px-4 py-2 d-flex align-items-center gap-2">
+            <span id="btnPredictText"><i class="fa-solid fa-wand-magic-sparkles"></i> Predict Retention Outcome</span>
+            <span id="btnPredictSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+          </button>
+          <button type="button" id="btnResetForm" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-rotate-left"></i> Reset
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Right Column: Enhanced Result Panel -->
+  <div class="col-lg-5">
+    <div class="panel h-100" id="resultPanel">
+      
+      <!-- Panel Header -->
+      <div class="panel-title d-flex justify-content-between align-items-center mb-3">
+        <span><i class="fa-solid fa-bullseye" style="color:var(--positive); font-size:14px;"></i> Retention Intelligence</span>
+        <span id="activeCustomerBadge" class="badge bg-secondary-subtle text-secondary border d-none" style="font-size:11px;"></span>
+      </div>
+
+      <!-- Loading State (hidden by default) -->
+      <div id="resultLoadingState" class="text-center py-5 d-none">
+        <div class="spinner-border text-primary mb-3" style="width:3rem; height:3rem;" role="status"></div>
+        <div style="font-weight:600; font-size:14px; color:var(--text);">Analyzing Customer Retention Signals...</div>
+        <p class="text-muted small mt-1">Executing Random Forest model inference and computing SHAP TreeExplainer feature attributions</p>
+      </div>
+
+      <!-- Result State Container -->
+      <div id="resultContent" class="{% if not result %}d-none{% endif %}">
+        
+        <!-- 1. Top Verdict Banner -->
+        <div id="verdictBanner" class="p-3 rounded mb-3 text-center" style="background:var(--surface-2); border:1px solid var(--border);">
+          <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
+            <span id="riskBandBadge" class="badge-risk-{{ result.risk_band|lower if result else 'low' }}" style="font-size:12px; padding:4px 10px;">
+              {{ result.risk_band if result else 'Low' }} Risk
+            </span>
+            <span id="predictionVerdict" style="font-size:15px; font-weight:700; color:var(--text);">
+              {{ result.prediction if result else 'Likely to Stay' }}
+            </span>
+          </div>
+          <div id="explanationCallout" class="explanation-callout text-start mt-2 mb-0" style="font-size:12.5px; line-height:1.5;">
+            {{ result.explanation_text if result else '' }}
+          </div>
+        </div>
+
+        <!-- 2. Circular Gauge Meter -->
+        <div class="text-center my-3">
+          <div class="position-relative d-inline-block">
+            <svg width="150" height="150" viewBox="0 0 150 150" style="display:block;">
+              <!-- Background Circle -->
+              <circle cx="75" cy="75" r="62" stroke="var(--surface-3)" stroke-width="12" fill="none"/>
+              <!-- Progress Circle -->
+              {% set pct = result.churn_probability if result else 0 %}
+              {% set dashoffset = 389.56 * (1 - pct / 100) %}
+              <circle id="gaugeCircle" cx="75" cy="75" r="62" 
+                      stroke="{{ 'var(--danger)' if result and result.risk_band == 'High' else ('var(--warning)' if result and result.risk_band == 'Medium' else 'var(--success)') }}"
+                      stroke-width="12" fill="none"
+                      stroke-linecap="round" stroke-dasharray="389.56" stroke-dashoffset="{{ dashoffset }}"
+                      transform="rotate(-90 75 75)" style="transition: stroke-dashoffset 0.8s ease, stroke 0.4s ease;"/>
+            </svg>
+            <div class="position-absolute top-50 start-50 translate-middle text-center" style="width:100px;">
+              <div id="gaugePercentage" style="font-family:'JetBrains Mono', monospace; font-size:28px; font-weight:800; line-height:1; color:var(--text);">
+                {{ result.churn_probability if result else '0.0' }}%
+              </div>
+              <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--text-tertiary); margin-top:3px;">
+                Churn Probability
+              </div>
+            </div>
+          </div>
+          <div class="text-muted mt-2" style="font-size:11.5px;">
+            Baseline Churn Rate: <strong>25.6%</strong> &bull; Cutoff: High &ge; 66% | Med &ge; 33%
+          </div>
+        </div>
+
+        <!-- 3. SHAP Feature Breakdown -->
+        <div class="mb-3 p-3 rounded" style="background:var(--surface-2); border:1px solid var(--border);">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div style="font-size:11.5px; font-weight:700; color:var(--violet); letter-spacing:.03em; text-transform:uppercase;">
+              <i class="fa-solid fa-brain me-1"></i> SHAP Feature Contribution Breakdown
+            </div>
+            <span class="text-muted" style="font-size:10.5px;">TreeExplainer Values</span>
+          </div>
+
+          <!-- Increasing Churn Risk -->
+          <div class="mb-3">
+            <div style="font-size:11px; font-weight:700; color:var(--danger); letter-spacing:.03em; margin-bottom:6px;">
+              <i class="fa-solid fa-arrow-trend-up me-1"></i> FACTORS INCREASING CHURN RISK
+            </div>
+            <div id="increasingFactorsList" class="shap-factor-list">
+              {% if result and result.top_increasing_factors %}
+                {% for f in result.top_increasing_factors %}
+                <div class="shap-factor">
+                  <div class="shap-factor-label" style="font-size:12px;">{{ f.label }}</div>
+                  <div class="shap-factor-value" style="font-size:11px; color:var(--danger);">+{{ "%.3f"|format(f.shap_value) }}</div>
+                  <div class="shap-factor-track"><span class="shap-factor-fill risk-up" style="width: {{ f.bar_pct }}%; left: 0;"></span></div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="text-muted small" style="font-size:11.5px;">No risk-increasing factors identified.</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Reducing Churn Risk -->
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--success); letter-spacing:.03em; margin-bottom:6px;">
+              <i class="fa-solid fa-arrow-trend-down me-1"></i> FACTORS PROTECTING RETENTION
+            </div>
+            <div id="reducingFactorsList" class="shap-factor-list">
+              {% if result and result.top_reducing_factors %}
+                {% for f in result.top_reducing_factors %}
+                <div class="shap-factor">
+                  <div class="shap-factor-label" style="font-size:12px;">{{ f.label }}</div>
+                  <div class="shap-factor-value" style="font-size:11px; color:var(--success);">−{{ "%.3f"|format(-f.shap_value) }}</div>
+                  <div class="shap-factor-track"><span class="shap-factor-fill risk-down" style="width: {{ f.bar_pct }}%; left: 0;"></span></div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="text-muted small" style="font-size:11.5px;">No retention-protecting factors identified.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Actionable Retention Recommendation Card -->
+        <div id="recommendationCard" class="p-3 rounded mb-3" style="background:var(--surface-2); border-left:4px solid {{ 'var(--danger)' if result and result.risk_band == 'High' else ('var(--warning)' if result and result.risk_band == 'Medium' else 'var(--success)') }}; border-top:1px solid var(--border); border-right:1px solid var(--border); border-bottom:1px solid var(--border);">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div style="font-weight:700; font-size:13px; color:var(--text);">
+              <i class="fa-solid fa-lightbulb me-1" style="color:var(--warning);"></i> 
+              <span id="recTitle">{{ result.recommendation.title if result and result.recommendation else 'Targeted Retention Intervention' }}</span>
+            </div>
+            <span id="recBadge" class="badge" style="background:rgba(99,102,241,0.15); color:var(--text); font-size:10.5px;">
+              {{ result.recommendation.priority if result and result.recommendation else 'Recommended Action' }}
+            </span>
+          </div>
+          <p id="recStrategy" class="mb-2" style="font-size:12px; color:var(--text-secondary); line-height:1.55;">
+            {{ result.recommendation.strategy if result and result.recommendation else 'Based on customer behavior, deploy personalized engagement.' }}
+          </p>
+          <div class="p-2 rounded mb-2" style="background:var(--surface); border:1px dashed var(--border);">
+            <div style="font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--accent);">
+              <i class="fa-solid fa-gift me-1"></i> Suggested Retention Offer
+            </div>
+            <div id="recOffer" style="font-size:12px; font-weight:600; color:var(--text); margin-top:3px;">
+              {{ result.recommendation.suggested_offer if result and result.recommendation else 'Personalized loyalty incentive.' }}
+            </div>
+          </div>
+          <div class="d-flex justify-content-between small pt-2 border-top text-muted" style="font-size:11px;">
+            <div><i class="fa-solid fa-bullhorn me-1"></i> <span id="recChannel">{{ result.recommendation.channel if result and result.recommendation else 'Omnichannel' }}</span></div>
+            <div class="text-success"><i class="fa-solid fa-shield-halved me-1"></i> <span id="recImpact">{{ result.recommendation.expected_impact if result and result.recommendation else 'Reduces churn risk' }}</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Empty State (shown when no result has been computed yet) -->
+      <div id="emptyResultState" class="{% if result %}d-none{% endif %} text-center py-5">
+        <div style="width:64px; height:64px; border-radius:50%; background:var(--surface-2); display:inline-flex; align-items:center; justify-content:center; margin-bottom:16px; border:1px solid var(--border);">
+          <i class="fa-solid fa-wand-magic-sparkles" style="font-size:24px; color:var(--accent);"></i>
+        </div>
+        <h5 style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:6px;">Ready to Predict Retention</h5>
+        <p class="text-muted mx-auto" style="max-width:320px; font-size:12.5px; line-height:1.5;">
+          Select a sample customer above to auto-fill real database values, or adjust what-if inputs to test sensitivity.
+        </p>
+        <div class="d-flex flex-column gap-2 text-start mx-auto mt-3 p-3 rounded" style="max-width:340px; background:var(--surface-2); border:1px solid var(--border); font-size:12px;">
+          <div><i class="fa-solid fa-circle-check text-success me-2"></i> Instant Churn Probability Gauge</div>
+          <div><i class="fa-solid fa-circle-check text-primary me-2"></i> SHAP Positive & Negative Risk Attribution</div>
+          <div><i class="fa-solid fa-circle-check text-warning me-2"></i> Actionable Business Retention Playbook</div>
+        </div>
+      </div>
+
+      <!-- Footer note -->
+      <p class="text-muted mt-3 mb-0" style="font-size:11.5px;">
+        <i class="fa-solid fa-circle-info me-1"></i> Looking for customer-wide views?
+        <a href="{{ url_for('customer360_search') }}" style="color:var(--accent); text-decoration:none;">Open Customer 360</a>
+        or simulate group interventions in <a href="{{ url_for('retention_simulator') }}" style="color:var(--accent); text-decoration:none;">Retention Simulator</a>.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const sampleSelect = document.getElementById("sampleCustomerSelect");
+  const manualInput = document.getElementById("manualCustomerId");
+  const btnLoad = document.getElementById("btnLoadCustomer");
+  const lookupStatus = document.getElementById("customerLookupStatus");
+  const form = document.getElementById("predictionForm");
+  const btnPredict = document.getElementById("btnPredict");
+  const btnPredictText = document.getElementById("btnPredictText");
+  const btnPredictSpinner = document.getElementById("btnPredictSpinner");
+  const btnReset = document.getElementById("btnResetForm");
+
+  const resultContent = document.getElementById("resultContent");
+  const emptyState = document.getElementById("emptyResultState");
+  const loadingState = document.getElementById("resultLoadingState");
+  const activeCustomerBadge = document.getElementById("activeCustomerBadge");
+
+  // Helper to show lookup status
+  function setLookupStatus(msg, isError) {
+    if (!lookupStatus) return;
+    lookupStatus.classList.remove("d-none", "text-danger", "text-success", "text-muted");
+    lookupStatus.classList.add(isError ? "text-danger" : "text-success");
+    lookupStatus.innerHTML = isError ? `<i class="fa-solid fa-triangle-exclamation me-1"></i> ${msg}` : `<i class="fa-solid fa-circle-check me-1"></i> ${msg}`;
+  }
+
+  // Load Customer Features by ID
+  function loadCustomerFeatures(customerId) {
+    if (!customerId) return;
+    setLookupStatus("Loading customer data...", false);
+    btnLoad.disabled = true;
+
+    fetch("/api/customer-features/" + customerId)
+      .then(res => {
+        if (!res.ok) throw new Error("Customer ID " + customerId + " not found in database.");
+        return res.json();
+      })
+      .then(data => {
+        btnLoad.disabled = false;
+        setLookupStatus(`Loaded <strong>${data.CustomerName}</strong> (ID: ${data.CustomerID}, Segment: ${data.SegmentName}, Stored Risk: ${data.ChurnRiskBand})`, false);
+        
+        if (activeCustomerBadge) {
+          activeCustomerBadge.classList.remove("d-none");
+          activeCustomerBadge.textContent = `#${data.CustomerID} - ${data.CustomerName}`;
+        }
+
+        // Populate form inputs
+        const fieldMap = {
+          "field_Tenure": data.Tenure,
+          "field_CityTier": data.CityTier,
+          "field_WarehouseToHome": data.WarehouseToHome,
+          "field_Gender": data.Gender,
+          "field_HourSpendOnApp": data.HourSpendOnApp,
+          "field_NumberOfDeviceRegistered": data.NumberOfDeviceRegistered,
+          "field_SatisfactionScore": data.SatisfactionScore,
+          "field_Complain": data.Complain,
+          "field_OrderCount": data.OrderCount,
+          "field_DaySinceLastOrder": data.DaySinceLastOrder,
+          "field_CouponUsed": data.CouponUsed,
+          "field_OrderAmountHikeFromlastYear": data.OrderAmountHikeFromlastYear,
+          "field_CashbackAmount": data.CashbackAmount,
+          "field_EstimatedAnnualSpendINR": data.EstimatedAnnualSpendINR
+        };
+
+        for (const [id, val] of Object.entries(fieldMap)) {
+          const el = document.getElementById(id);
+          if (el && val !== undefined) {
+            el.value = val;
+            // Visual highlight flash
+            el.style.transition = "background-color 0.4s ease";
+            el.style.backgroundColor = "rgba(99, 102, 241, 0.15)";
+            setTimeout(() => { el.style.backgroundColor = ""; }, 600);
+          }
+        }
+
+        // Auto trigger prediction on customer select for instant insight
+        runPrediction();
+      })
+      .catch(err => {
+        btnLoad.disabled = false;
+        setLookupStatus(err.message, true);
+      });
+  }
+
+  // Sample Customer Dropdown Change
+  if (sampleSelect) {
+    sampleSelect.addEventListener("change", function() {
+      if (this.value) {
+        if (manualInput) manualInput.value = this.value;
+        loadCustomerFeatures(this.value);
+      }
+    });
+  }
+
+  // Manual Customer ID Button Click
+  if (btnLoad) {
+    btnLoad.addEventListener("click", function() {
+      const val = manualInput ? manualInput.value.trim() : "";
+      if (!val) {
+        setLookupStatus("Please enter a numeric Customer ID (e.g. 50001).", true);
+        return;
+      }
+      loadCustomerFeatures(val);
+    });
+  }
+
+  // Reset form
+  if (btnReset) {
+    btnReset.addEventListener("click", function() {
+      form.reset();
+      if (sampleSelect) sampleSelect.value = "";
+      if (manualInput) manualInput.value = "";
+      if (lookupStatus) lookupStatus.classList.add("d-none");
+      if (activeCustomerBadge) activeCustomerBadge.classList.add("d-none");
+      if (resultContent) resultContent.classList.add("d-none");
+      if (emptyState) emptyState.classList.remove("d-none");
+    });
+  }
+
+  // Render Result function
+  function renderResult(res) {
+    if (!res || res.error) {
+      alert(res ? res.error : "Prediction failed");
+      return;
+    }
+
+    // Hide empty & loading states, show result container
+    if (emptyState) emptyState.classList.add("d-none");
+    if (loadingState) loadingState.classList.add("d-none");
+    if (resultContent) resultContent.classList.remove("d-none");
+
+    const prob = Number(res.churn_probability) || 0;
+    const band = res.risk_band || "Low";
+
+    // Verdict Banner
+    const riskBadge = document.getElementById("riskBandBadge");
+    if (riskBadge) {
+      riskBadge.className = `badge-risk-${band.toLowerCase()}`;
+      riskBadge.textContent = `${band} Risk`;
+    }
+    const verdictEl = document.getElementById("predictionVerdict");
+    if (verdictEl) {
+      verdictEl.textContent = res.prediction || (prob >= 50 ? "Likely to Churn" : "Likely to Stay");
+      verdictEl.style.color = band === "High" ? "var(--danger)" : (band === "Medium" ? "var(--warning)" : "var(--success)");
+    }
+    const calloutEl = document.getElementById("explanationCallout");
+    if (calloutEl) {
+      calloutEl.textContent = res.explanation_text || `Customer churn probability is ${prob.toFixed(1)}%.`;
+    }
+
+    // Circular Gauge
+    const gaugeCircle = document.getElementById("gaugeCircle");
+    const gaugePct = document.getElementById("gaugePercentage");
+    if (gaugePct) gaugePct.textContent = `${prob.toFixed(1)}%`;
+    if (gaugeCircle) {
+      const circumference = 389.56;
+      const offset = circumference * (1 - prob / 100);
+      gaugeCircle.style.strokeDashoffset = offset;
+      gaugeCircle.style.stroke = band === "High" ? "var(--danger)" : (band === "Medium" ? "var(--warning)" : "var(--success)");
+    }
+
+    // SHAP Increasing Factors
+    const incList = document.getElementById("increasingFactorsList");
+    if (incList) {
+      if (res.top_increasing_factors && res.top_increasing_factors.length > 0) {
+        incList.innerHTML = res.top_increasing_factors.map(f => `
+          <div class="shap-factor">
+            <div class="shap-factor-label" style="font-size:12px;">${f.label}</div>
+            <div class="shap-factor-value" style="font-size:11px; color:var(--danger);">+${Number(f.shap_value).toFixed(3)}</div>
+            <div class="shap-factor-track"><span class="shap-factor-fill risk-up" style="width: ${f.bar_pct || 50}%; left: 0;"></span></div>
+          </div>
+        `).join("");
+      } else {
+        incList.innerHTML = `<div class="text-muted small" style="font-size:11.5px;">No risk-increasing factors identified.</div>`;
+      }
+    }
+
+    // SHAP Reducing Factors
+    const redList = document.getElementById("reducingFactorsList");
+    if (redList) {
+      if (res.top_reducing_factors && res.top_reducing_factors.length > 0) {
+        redList.innerHTML = res.top_reducing_factors.map(f => `
+          <div class="shap-factor">
+            <div class="shap-factor-label" style="font-size:12px;">${f.label}</div>
+            <div class="shap-factor-value" style="font-size:11px; color:var(--success);">−${Math.abs(Number(f.shap_value)).toFixed(3)}</div>
+            <div class="shap-factor-track"><span class="shap-factor-fill risk-down" style="width: ${f.bar_pct || 50}%; left: 0;"></span></div>
+          </div>
+        `).join("");
+      } else {
+        redList.innerHTML = `<div class="text-muted small" style="font-size:11.5px;">No retention-protecting factors identified.</div>`;
+      }
+    }
+
+    // Recommendation Card
+    const rec = res.recommendation || {};
+    const recCard = document.getElementById("recommendationCard");
+    const recTitle = document.getElementById("recTitle");
+    const recBadge = document.getElementById("recBadge");
+    const recStrategy = document.getElementById("recStrategy");
+    const recOffer = document.getElementById("recOffer");
+    const recChannel = document.getElementById("recChannel");
+    const recImpact = document.getElementById("recImpact");
+
+    if (recCard) {
+      recCard.style.borderLeftColor = band === "High" ? "var(--danger)" : (band === "Medium" ? "var(--warning)" : "var(--success)");
+    }
+    if (recTitle) recTitle.textContent = rec.title || "Targeted Retention Action";
+    if (recBadge) recBadge.textContent = rec.priority || "Recommended Strategy";
+    if (recStrategy) recStrategy.textContent = rec.strategy || "Deploy proactive communication.";
+    if (recOffer) recOffer.textContent = rec.suggested_offer || "Milestone customer discount.";
+    if (recChannel) recChannel.textContent = rec.channel || "Omnichannel";
+    if (recImpact) recImpact.textContent = rec.expected_impact || "Reduces customer churn";
+  }
+
+  // Run Async Prediction
+  function runPrediction() {
+    const formData = new FormData(form);
+    const payload = {};
+    formData.forEach((value, key) => { payload[key] = value; });
+
+    // UI Loading state
+    if (btnPredict) btnPredict.disabled = true;
+    if (btnPredictSpinner) btnPredictSpinner.classList.remove("d-none");
+    if (emptyState) emptyState.classList.add("d-none");
+    if (resultContent) resultContent.classList.add("d-none");
+    if (loadingState) loadingState.classList.remove("d-none");
+
+    fetch("/api/predict-retention", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(res => {
+      if (!res.ok) throw new Error("Prediction API responded with status " + res.status);
+      return res.json();
+    })
+    .then(data => {
+      if (btnPredict) btnPredict.disabled = false;
+      if (btnPredictSpinner) btnPredictSpinner.classList.add("d-none");
+      if (loadingState) loadingState.classList.add("d-none");
+      renderResult(data);
+    })
+    .catch(err => {
+      console.error("Prediction error:", err);
+      if (btnPredict) btnPredict.disabled = false;
+      if (btnPredictSpinner) btnPredictSpinner.classList.add("d-none");
+      if (loadingState) loadingState.classList.add("d-none");
+      // Fallback: submit standard form if AJAX fails
+      form.submit();
+    });
+  }
+
+  // Handle Form Submit
+  if (form) {
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+      runPrediction();
+    });
+  }
+});
+</script>
+{% endblock %}

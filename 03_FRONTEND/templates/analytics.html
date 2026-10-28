@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+{% block page_title %}Analytics{% endblock %}
+{% block content %}
+{% if not has_data %}
+<div class="panel empty-state">
+  <i class="fa-solid fa-chart-line"></i>
+  <h3>No analytics data yet</h3>
+  <p>Run the pipeline first to generate customer intelligence datasets.</p>
+</div>
+{% else %}
+<div class="row g-3">
+  <!-- 1. Preferred Order Category -->
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-title d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-bag-shopping" style="color:var(--accent); font-size:13px; margin-right:6px;"></i> Preferred Order Category</span>
+        {% if summary.top_category %}<span class="pill pill-tier" style="font-size:11px;">Top: {{ summary.top_category }}</span>{% endif %}
+      </div>
+      <div class="chart-container" style="position:relative; height:260px; width:100%;">
+        <div class="chart-loading-overlay analytics-skel"><span class="skeleton skeleton-chart"></span></div>
+        <canvas id="catChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Preferred Payment Mode -->
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-title d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-credit-card" style="color:var(--indigo); font-size:13px; margin-right:6px;"></i> Preferred Payment Mode</span>
+        {% if summary.top_payment %}<span class="pill pill-tier" style="font-size:11px;">Top: {{ summary.top_payment }}</span>{% endif %}
+      </div>
+      <div class="chart-container" style="position:relative; height:260px; width:100%;">
+        <div class="chart-loading-overlay analytics-skel"><span class="skeleton skeleton-chart"></span></div>
+        <canvas id="payChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Average Annual Spend by State -->
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-title d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-indian-rupee-sign" style="color:var(--positive); font-size:13px; margin-right:6px;"></i> Average Annual Spend (₹) by State</span>
+        {% if summary.top_state %}<span class="pill pill-tier" style="font-size:11px;">Highest: {{ summary.top_state }}</span>{% endif %}
+      </div>
+      <div class="chart-container" style="position:relative; height:260px; width:100%;">
+        <div class="chart-loading-overlay analytics-skel"><span class="skeleton skeleton-chart"></span></div>
+        <canvas id="stateChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Churn Rate by Satisfaction Score -->
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-title d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-face-frown" style="color:var(--negative); font-size:13px; margin-right:6px;"></i> Churn Rate (%) by Satisfaction Score</span>
+        {% if summary.sat_churn_spread %}<span class="pill pill-tier" style="font-size:11px;">{{ summary.sat_churn_spread }}</span>{% endif %}
+      </div>
+      <div class="chart-container" style="position:relative; height:260px; width:100%;">
+        <div class="chart-loading-overlay analytics-skel"><span class="skeleton skeleton-chart"></span></div>
+        <canvas id="satChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Customers by Tenure -->
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-title d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-hourglass-half" style="color:var(--accent); font-size:13px; margin-right:6px;"></i> Customers by Tenure</span>
+        {% if summary.top_tenure %}<span class="pill pill-tier" style="font-size:11px;">Peak: {{ summary.top_tenure }}</span>{% endif %}
+      </div>
+      <div class="chart-container" style="position:relative; height:260px; width:100%;">
+        <div class="chart-loading-overlay analytics-skel"><span class="skeleton skeleton-chart"></span></div>
+        <canvas id="tenureChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Churn Rate by City Tier -->
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-title d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-city" style="color:var(--negative); font-size:13px; margin-right:6px;"></i> Churn Rate (%) by City Tier</span>
+        {% if summary.tier_churn %}<span class="pill pill-tier" style="font-size:11px;">{{ summary.tier_churn }}</span>{% endif %}
+      </div>
+      <div class="chart-container" style="position:relative; height:260px; width:100%;">
+        <div class="chart-loading-overlay analytics-skel"><span class="skeleton skeleton-chart"></span></div>
+        <canvas id="tierChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Login Device Mix -->
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-title d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-mobile-screen" style="color:var(--indigo); font-size:13px; margin-right:6px;"></i> Login Device Mix</span>
+        {% if summary.top_device %}<span class="pill pill-tier" style="font-size:11px;">Primary: {{ summary.top_device }}</span>{% endif %}
+      </div>
+      <div class="chart-container" style="position:relative; height:260px; width:100%;">
+        <div class="chart-loading-overlay analytics-skel"><span class="skeleton skeleton-chart"></span></div>
+        <canvas id="deviceChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Churn Rate: Complained vs. No Complaint -->
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-title d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-triangle-exclamation" style="color:var(--negative); font-size:13px; margin-right:6px;"></i> Churn Rate: Complained vs. No Complaint</span>
+        {% if summary.complaint_impact %}<span class="pill pill-tier" style="font-size:11px;">{{ summary.complaint_impact }}</span>{% endif %}
+      </div>
+      <div class="chart-container" style="position:relative; height:260px; width:100%;">
+        <div class="chart-loading-overlay analytics-skel"><span class="skeleton skeleton-chart"></span></div>
+        <canvas id="complaintChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. Avg. Engagement Score by Segment -->
+  {% if charts.engagement_by_segment %}
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-title d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-bolt" style="color:var(--positive); font-size:13px; margin-right:6px;"></i> Avg. Engagement Score by Segment</span>
+        {% if summary.top_engagement %}<span class="pill pill-tier" style="font-size:11px;">Highest: {{ summary.top_engagement }}</span>{% endif %}
+      </div>
+      <div class="chart-container" style="position:relative; height:260px; width:100%;">
+        <div class="chart-loading-overlay analytics-skel"><span class="skeleton skeleton-chart"></span></div>
+        <canvas id="engagementChart"></canvas>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- 10. Dataset Composition (real vs. augmented) -->
+  {% if charts.data_composition %}
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-title d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-database" style="color:var(--accent); font-size:13px; margin-right:6px;"></i> Dataset Composition (real vs. augmented)</span>
+        {% if summary.data_split %}<span class="pill pill-tier" style="font-size:11px;">{{ summary.data_split }}</span>{% endif %}
+      </div>
+      <div class="chart-container" style="position:relative; height:225px; width:100%;">
+        <div class="chart-loading-overlay analytics-skel"><span class="skeleton skeleton-chart"></span></div>
+        <canvas id="compositionChart"></canvas>
+      </div>
+      <p style="font-size:11px; color:var(--text-tertiary); margin:8px 2px 0;">
+        <i class="fa-solid fa-circle-info"></i> The raw Kaggle dataset provides 5,630 baseline profiles. Statistically grounded bootstrap + jitter augmentation expands the base to 1,000,000 customers for enterprise-scale modeling.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{% if has_data %}
+<script>
+(function () {
+  const PALETTE = (typeof window.CHART_COLORS !== 'undefined' && window.CHART_COLORS.length)
+    ? window.CHART_COLORS
+    : ["#8B6BFF", "#2DD4E8", "#34D399", "#FBBF24", "#FB7185", "#6D4FE0", "#A78BFA", "#38BDF8"];
+
+  function safeChart(id, config) {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    try {
+      return new Chart(el, config);
+    } catch (err) {
+      console.error("Failed to render chart #" + id, err);
+      const container = el.parentElement;
+      if (container) {
+        container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-tertiary);font-size:12px;"><i class="fa-solid fa-chart-simple" style="margin-right:6px;"></i> Visualization temporarily unavailable</div>';
+      }
+      return null;
+    }
+  }
+
+  function handleHover(e, els) {
+    if (e && e.chart && e.chart.canvas) {
+      e.chart.canvas.style.cursor = els && els.length ? 'pointer' : 'default';
+    }
+  }
+
+  function initAnalyticsCharts() {
+    if (typeof Chart === 'undefined') {
+      console.error("Chart.js is not loaded yet.");
+      return;
+    }
+
+    // 1. Preferred Order Category
+    const catLabels = {{ charts.category_dist.keys()|list|tojson }};
+    const catData = {{ charts.category_dist.values()|list|tojson }};
+    safeChart('catChart', {
+      type: 'bar',
+      data: {
+        labels: catLabels,
+        datasets: [{
+          label: 'Orders',
+          data: catData,
+          backgroundColor: '#8B6BFF',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        onHover: handleHover,
+        onClick: (e, els) => {
+          if (!els || !els.length) return;
+          const label = catLabels[els[0].index];
+          if (label) window.location.href = '/recommendations?q=' + encodeURIComponent(label);
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.parsed.y.toLocaleString()} customers`,
+              footer: () => 'Click to view in Recommendations'
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: (v) => v >= 1000 ? (v / 1000).toLocaleString() + 'k' : v
+            }
+          }
+        }
+      }
+    });
+
+    // 2. Preferred Payment Mode
+    const payLabels = {{ charts.payment_dist.keys()|list|tojson }};
+    const payData = {{ charts.payment_dist.values()|list|tojson }};
+    safeChart('payChart', {
+      type: 'doughnut',
+      data: {
+        labels: payLabels,
+        datasets: [{
+          data: payData,
+          backgroundColor: PALETTE,
+          borderWidth: 0,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '58%',
+        onHover: handleHover,
+        onClick: (e, els) => {
+          if (!els || !els.length) return;
+          const label = payLabels[els[0].index];
+          if (label) window.location.href = '/customers?q=' + encodeURIComponent(label);
+        },
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { boxWidth: 10, font: { size: 11 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.label}: ${ctx.parsed.toLocaleString()} (${Math.round(ctx.parsed / {{ charts.payment_dist.values()|list|sum }} * 100)}%)`,
+              footer: () => 'Click to filter Customer List'
+            }
+          }
+        }
+      }
+    });
+
+    // 3. Average Annual Spend (₹) by State
+    const stateLabels = {{ charts.state_spend.keys()|list|tojson }};
+    const stateData = {{ charts.state_spend.values()|list|tojson }};
+    safeChart('stateChart', {
+      type: 'bar',
+      data: {
+        labels: stateLabels,
+        datasets: [{
+          label: 'Avg Spend',
+          data: stateData,
+          backgroundColor: '#2DD4E8',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        onHover: handleHover,
+        onClick: (e, els) => {
+          if (!els || !els.length) return;
+          const label = stateLabels[els[0].index];
+          if (label) window.location.href = '/customers?q=' + encodeURIComponent(label);
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ₹${Math.round(ctx.parsed.x).toLocaleString('en-IN')}`,
+              footer: () => 'Click to filter Customer List'
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              callback: (v) => '₹' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v)
+            }
+          }
+        }
+      }
+    });
+
+    // 4. Churn Rate (%) by Satisfaction Score
+    const satLabels = {{ charts.satisfaction_churn.keys()|list|tojson }};
+    const satData = {{ charts.satisfaction_churn.values()|list|tojson }};
+    safeChart('satChart', {
+      type: 'line',
+      data: {
+        labels: satLabels,
+        datasets: [{
+          label: 'Churn %',
+          data: satData,
+          borderColor: '#FB7185',
+          backgroundColor: 'rgba(251, 113, 133, 0.15)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 6,
+          pointHoverRadius: 9,
+          pointBackgroundColor: '#FB7185',
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        onHover: handleHover,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.parsed.y}% churn rate`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: (v) => v + '%' }
+          }
+        }
+      }
+    });
+
+    // 5. Customers by Tenure
+    const tenureLabels = {{ charts.tenure_dist.keys()|list|tojson }};
+    const tenureData = {{ charts.tenure_dist.values()|list|tojson }};
+    safeChart('tenureChart', {
+      type: 'bar',
+      data: {
+        labels: tenureLabels,
+        datasets: [{
+          label: 'Customers',
+          data: tenureData,
+          backgroundColor: '#8B6BFF',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.parsed.y.toLocaleString()} customers`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: (v) => v >= 1000 ? (v / 1000).toLocaleString() + 'k' : v
+            }
+          }
+        }
+      }
+    });
+
+    // 6. Churn Rate (%) by City Tier
+    const tierLabels = {{ charts.city_tier_churn.keys()|list|tojson }};
+    const tierData = {{ charts.city_tier_churn.values()|list|tojson }};
+    safeChart('tierChart', {
+      type: 'bar',
+      data: {
+        labels: tierLabels,
+        datasets: [{
+          label: 'Churn %',
+          data: tierData,
+          backgroundColor: ['#2DD4E8', '#8B6BFF', '#FB7185'],
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.parsed.y}% churn rate`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: (v) => v + '%' }
+          }
+        }
+      }
+    });
+
+    // 7. Login Device Mix
+    const devLabels = {{ charts.device_dist.keys()|list|tojson }};
+    const devData = {{ charts.device_dist.values()|list|tojson }};
+    safeChart('deviceChart', {
+      type: 'doughnut',
+      data: {
+        labels: devLabels,
+        datasets: [{
+          data: devData,
+          backgroundColor: PALETTE,
+          borderWidth: 0,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '58%',
+        onHover: handleHover,
+        onClick: (e, els) => {
+          if (!els || !els.length) return;
+          const label = devLabels[els[0].index];
+          if (label) window.location.href = '/customers?q=' + encodeURIComponent(label);
+        },
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { boxWidth: 10, font: { size: 11 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.label}: ${ctx.parsed.toLocaleString()} (${Math.round(ctx.parsed / {{ charts.device_dist.values()|list|sum }} * 100)}%)`,
+              footer: () => 'Click to filter Customer List'
+            }
+          }
+        }
+      }
+    });
+
+    // 8. Churn Rate: Complained vs. No Complaint
+    const compLabels = {{ charts.complaint_churn.keys()|list|tojson }};
+    const compData = {{ charts.complaint_churn.values()|list|tojson }};
+    safeChart('complaintChart', {
+      type: 'bar',
+      data: {
+        labels: compLabels,
+        datasets: [{
+          label: 'Churn %',
+          data: compData,
+          backgroundColor: ['#34D399', '#FB7185'],
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.parsed.y}% churn rate`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: (v) => v + '%' }
+          }
+        }
+      }
+    });
+
+    // 9. Avg. Engagement Score by Segment
+    {% if charts.engagement_by_segment %}
+    const engLabels = {{ charts.engagement_by_segment.keys()|list|tojson }};
+    const engData = {{ charts.engagement_by_segment.values()|list|tojson }};
+    safeChart('engagementChart', {
+      type: 'bar',
+      data: {
+        labels: engLabels,
+        datasets: [{
+          label: 'Engagement Score',
+          data: engData,
+          backgroundColor: '#34D399',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        onHover: handleHover,
+        onClick: (e, els) => {
+          if (!els || !els.length) return;
+          const label = engLabels[els[0].index];
+          if (label) window.location.href = '/customers?q=' + encodeURIComponent(label);
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.parsed.x} / 100 engagement`,
+              footer: () => 'Click to filter Customer List'
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            max: 100
+          }
+        }
+      }
+    });
+    {% endif %}
+
+    // 10. Dataset Composition
+    {% if charts.data_composition %}
+    const compLabels2 = {{ charts.data_composition.keys()|list|tojson }};
+    const compData2 = {{ charts.data_composition.values()|list|tojson }};
+    safeChart('compositionChart', {
+      type: 'pie',
+      data: {
+        labels: compLabels2,
+        datasets: [{
+          data: compData2,
+          backgroundColor: ['#2DD4E8', '#8B6BFF'],
+          borderWidth: 0,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 10, font: { size: 11 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.label}: ${ctx.parsed.toLocaleString()} (${(ctx.parsed / {{ charts.data_composition.values()|list|sum }} * 100).toFixed(1)}%)`
+            }
+          }
+        }
+      }
+    });
+    {% endif %}
+  }
+
+  function fadeOutAnalyticsSkeletons() {
+    document.querySelectorAll('.analytics-skel').forEach(el => {
+      el.classList.add('fade-out');
+      setTimeout(() => { if (el.parentNode) el.remove(); }, 350);
+    });
+  }
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initAnalyticsCharts();
+    requestAnimationFrame(fadeOutAnalyticsSkeletons);
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      initAnalyticsCharts();
+      requestAnimationFrame(fadeOutAnalyticsSkeletons);
+    });
+  }
+})();
+</script>
+{% endif %}
+{% endblock %}

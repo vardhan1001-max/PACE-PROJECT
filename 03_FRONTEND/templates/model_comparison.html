@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block page_title %}Model Comparison{% endblock %}
+{% block content %}
+
+{# ── Churn Classifier Comparison ── #}
+<div class="panel">
+  <div class="panel-title">
+    <i class="fa-solid fa-scale-balanced" style="color:var(--accent); font-size:13px;"></i>
+    Retention Prediction — All 7 Classifiers
+  </div>
+
+  {% if not churn_metrics %}
+  <div class="empty-state">
+    <i class="fa-solid fa-scale-balanced"></i>
+    <p>Run the pipeline to see model comparison.</p>
+  </div>
+  {% else %}
+
+  {# Determine per-metric max values for bar scaling #}
+  {% set sorted_churn = churn_metrics|sort(attribute='f1_score', reverse=true) %}
+  {% set max_acc  = (churn_metrics|max(attribute='accuracy')).accuracy  | float %}
+  {% set max_prec = (churn_metrics|max(attribute='precision')).precision | float %}
+  {% set max_rec  = (churn_metrics|max(attribute='recall')).recall      | float %}
+  {% set max_f1   = (churn_metrics|max(attribute='f1_score')).f1_score  | float %}
+  {% set max_roc  = (churn_metrics|max(attribute='roc_auc')).roc_auc    | float %}
+  {% set champion = sorted_churn[0] %}
+
+  {# Champion Highlight Card #}
+  <div class="champion-card mb-4">
+    <div class="champion-badge"><i class="fa-solid fa-crown"></i> Champion Model</div>
+    <div class="champion-name">{{ champion.model }}</div>
+    <div class="champion-metrics">
+      <div class="champion-metric">
+        <div class="champion-metric-val">{{ champion.accuracy }}</div>
+        <div class="champion-metric-label">Accuracy</div>
+      </div>
+      <div class="champion-metric">
+        <div class="champion-metric-val">{{ champion.precision }}</div>
+        <div class="champion-metric-label">Precision</div>
+      </div>
+      <div class="champion-metric">
+        <div class="champion-metric-val">{{ champion.recall }}</div>
+        <div class="champion-metric-label">Recall</div>
+      </div>
+      <div class="champion-metric champion-highlight">
+        <div class="champion-metric-val">{{ champion.f1_score }}</div>
+        <div class="champion-metric-label">F1 Score ★</div>
+      </div>
+      <div class="champion-metric">
+        <div class="champion-metric-val">{{ champion.roc_auc }}</div>
+        <div class="champion-metric-label">ROC-AUC</div>
+      </div>
+    </div>
+  </div>
+
+  {# Full Model Comparison Bars #}
+  <div class="model-compare-list">
+    {% for m in sorted_churn %}
+    {% set is_best = loop.first %}
+    <div class="model-compare-row {{ 'model-best' if is_best }}">
+      <div class="model-compare-header">
+        <div class="model-compare-name">
+          {% if is_best %}<i class="fa-solid fa-crown" style="color:var(--warning); font-size:11px; margin-right:4px;"></i>{% endif %}
+          <strong>{{ m.model }}</strong>
+          {% if is_best %}<span class="badge-segment ms-2">Champion</span>{% endif %}
+        </div>
+        <div class="model-compare-rank">#{{ loop.index }}</div>
+      </div>
+      <div class="model-metric-bars">
+        <div class="model-metric-bar-row">
+          <span class="model-metric-name">Accuracy</span>
+          <div class="model-bar-track">
+            <div class="model-bar-fill" style="width:{{ ((m.accuracy|float) / max_acc * 100)|round(1) }}%; background: var(--violet);"></div>
+          </div>
+          <span class="model-metric-val {% if m.accuracy|float == max_acc %}metric-best{% endif %}">{{ m.accuracy }}</span>
+        </div>
+        <div class="model-metric-bar-row">
+          <span class="model-metric-name">Precision</span>
+          <div class="model-bar-track">
+            <div class="model-bar-fill" style="width:{{ ((m.precision|float) / max_prec * 100)|round(1) }}%; background: var(--cyan);"></div>
+          </div>
+          <span class="model-metric-val {% if m.precision|float == max_prec %}metric-best{% endif %}">{{ m.precision }}</span>
+        </div>
+        <div class="model-metric-bar-row">
+          <span class="model-metric-name">Recall</span>
+          <div class="model-bar-track">
+            <div class="model-bar-fill" style="width:{{ ((m.recall|float) / max_rec * 100)|round(1) }}%; background: var(--success);"></div>
+          </div>
+          <span class="model-metric-val {% if m.recall|float == max_rec %}metric-best{% endif %}">{{ m.recall }}</span>
+        </div>
+        <div class="model-metric-bar-row">
+          <span class="model-metric-name">F1 Score</span>
+          <div class="model-bar-track">
+            <div class="model-bar-fill" style="width:{{ ((m.f1_score|float) / max_f1 * 100)|round(1) }}%; background: var(--warning);"></div>
+          </div>
+          <span class="model-metric-val {% if m.f1_score|float == max_f1 %}metric-best{% endif %}">{{ m.f1_score }}</span>
+        </div>
+        <div class="model-metric-bar-row">
+          <span class="model-metric-name">ROC-AUC</span>
+          <div class="model-bar-track">
+            <div class="model-bar-fill" style="width:{{ ((m.roc_auc|float) / max_roc * 100)|round(1) }}%; background: var(--danger);"></div>
+          </div>
+          <span class="model-metric-val {% if m.roc_auc|float == max_roc %}metric-best{% endif %}">{{ m.roc_auc }}</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{# ── Segmentation Clustering Comparison ── #}
+<div class="panel">
+  <div class="panel-title">
+    <i class="fa-solid fa-diagram-project" style="color:var(--positive); font-size:13px;"></i>
+    Segmentation — All 3 Clustering Algorithms
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>Clusters</th>
+          <th><span title="Higher is better (max 1.0)">Silhouette ↑</span></th>
+          <th><span title="Lower is better">Davies-Bouldin ↓</span></th>
+          <th><span title="Higher is better">Calinski-Harabasz ↑</span></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for m in seg_metrics %}
+        <tr>
+          <td><strong>{{ m.model }}</strong></td>
+          <td>{{ m.n_clusters }}</td>
+          <td>
+            <span class="metric-pill metric-pill-good">{{ m.silhouette or '—' }}</span>
+          </td>
+          <td>{{ m.davies_bouldin or '—' }}</td>
+          <td>{{ m.calinski_harabasz or '—' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
