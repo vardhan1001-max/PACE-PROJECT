@@ -26,3 +26,4 @@ python-dotenv==1.0.1
 # If installed, it's used to ALSO fit a Holt-Winters model for comparison
 # in the model-comparison table. Safe to skip if install fails.
 # statsmodels==0.14.2
+gunicorn
